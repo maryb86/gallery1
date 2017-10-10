@@ -1,5 +1,5 @@
 import React, { Component } from 'react';
-//import logo from './img/logo.svg';
+import update from 'immutability-helper';
 import Viewer from "./components/viewer";
 import Gallery from "./components/gallery"
 import batman from './img/batman.jpg';
@@ -12,10 +12,11 @@ import './style.css';
 class App extends Component {
   constructor(props) {
       super(props)
+      //TODO: AUTOMATICALLY DECIDE THE IMAGES BASED ON THE FOLDER
       this.state = {
           viewerImg: 0,
           images: [
-            {fileName: batman, title: "Batman"},
+            {fileName: batman, title: "Batman", selected: true},
             {fileName: drummer, title: "Drummer"},
             {fileName: duck, title: "Duck"},
             {fileName: polarbear, title: "Polar Bear"},
@@ -36,11 +37,20 @@ class App extends Component {
       return imageIndex;
   }
 
+  //TODO: CHANGE GALLERY HIGHLIGHT ON BACK AND FORWARD (REACT LIFE CYCLE)
   swapViewerImg(e) {
-      const image = this.findImg(e)
-      this.setState({
-          viewerImg: image
-      })
+      const previousImage = this.state.viewerImg;
+      const chosenImage = this.findImg(e);
+      if (this.state.viewerImg !== chosenImage) {
+          const images = update(this.state.images, {
+              [chosenImage]: {selected: {$set: true}}
+          });
+          delete images[previousImage].selected;
+          this.setState({
+              viewerImg: chosenImage,
+              images: images
+          });
+      }
   }
 
   goBack(e) {
@@ -72,10 +82,11 @@ class App extends Component {
   render() {
     return (
       <div className="App">
-        <header className="App-header">
-          <h1 className="App-title">Mary's collection of homemade toys</h1>
+        <header className="app-header">
+          <h1 className="app-title">Mary's collection of homemade toys</h1>
           <Viewer
-              viewerImg={this.state.images[this.state.viewerImg]}
+              viewerImg={this.state.viewerImg}
+              images={this.state.images}
               goBack={this.goBack}
               goForward={this.goForward}
           />
