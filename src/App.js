@@ -1,5 +1,5 @@
 import React, { Component } from 'react';
-import { Route, Redirect } from 'react-router-dom';
+import { Route, Redirect, Switch } from 'react-router-dom';
 import update from 'immutability-helper';
 import Viewer from "./components/viewer";
 import Gallery from "./components/gallery"
@@ -27,17 +27,7 @@ class App extends Component {
       this.swapViewerImg = this.swapViewerImg.bind(this);
       this.goBack = this.goBack.bind(this);
       this.goForward = this.goForward.bind(this);
-      this.findImg = this.findImg.bind(this);
-      this.MyViewer = this.MyViewer.bind(this);
-  }
-
-  //TODO: CAN THESE TWO BE COMBINED?
-  findImg(e) {
-      function lookForImg(element) {
-          return e.target.src.includes(element.fileName);
-      }
-      const imageIndex = this.state.images.findIndex(lookForImg);
-      return imageIndex;
+      this.viewerWrapper = this.viewerWrapper.bind(this);
   }
 
   findImgByFileName(fileName) {
@@ -45,41 +35,24 @@ class App extends Component {
           return element.fileName.includes(fileName);
       }
       const imageIndex = this.state.images.findIndex(lookForImg);
-      return imageIndex;
-  }
-
-  //TODO: LOSE THE DUPLICATION OF SWAPVIEWERIMG
-  swapViewerImg(e, imageInfo) {
-      const previousImage = this.state.viewerImg;
-      let chosenImage = "";
-      //TODO: CREATE LOCAL VAR FOR IMAGEINFO PROPERTIES FOR BETTER READING
-      if (imageInfo && (imageInfo.imageIndex || imageInfo.imageIndex === 0)) {
-          chosenImage = imageInfo.imageIndex;
+      if (imageIndex !== -1){
+          return imageIndex
       } else {
-          if (imageInfo && imageInfo.fileName) {
-              chosenImage = this.findImgByFileName(imageInfo.fileName);
-          } else {
-              chosenImage = this.findImg(e);
-          }
-      }
-      if (this.state.viewerImg !== chosenImage) {
-          const images = update(this.state.images, {
-              [chosenImage]: {selected: {$set: true}}
-          });
-          delete images[previousImage].selected;
-          this.setState({
-              viewerImg: chosenImage,
-              images: images
-          });
+          return 0;
       }
   }
 
-  swapViewerImgByUrl(imageInfo) {
+  swapViewerImg(imageInfo) {
+      //TODO: how to make imageinfo required object?
       const previousImage = this.state.viewerImg;
       let chosenImage = this.state.viewerImg;
-      if (imageInfo && imageInfo.fileName) {
-          chosenImage = this.findImgByFileName(imageInfo.fileName);
-      };
+      if (typeof imageInfo === "number"){
+          //number = swapViewerImg was passed the index to swap to
+          chosenImage = imageInfo;
+      } else if (typeof imageInfo === "string"){
+          //string = swapViewerImg was passed the filename, so convert to index
+          chosenImage = this.findImgByFileName(imageInfo);
+      }
       if (this.state.viewerImg !== chosenImage) {
           const images = update(this.state.images, {
               [chosenImage]: {selected: {$set: true}}
@@ -92,42 +65,30 @@ class App extends Component {
       }
   }
 
-  goBack(e) {
+  goBack() {
       const prevImg = this.state.viewerImg - 1;
       if (prevImg >= 0){
-          this.swapViewerImg(e, {
-              imageIndex: prevImg
-          });
+          return prevImg;
       } else {
-          this.swapViewerImg(e, {
-              imageIndex: this.state.images.length - 1
-          });
+          return this.state.images.length - 1;
       }
   }
 
-  goForward(e) {
+  goForward() {
       const nextImg = this.state.viewerImg + 1
       if (nextImg <= this.state.images.length - 1 ){
-          this.swapViewerImg(e, {
-              imageIndex: nextImg
-          });
+          return nextImg;
       } else {
-          this.swapViewerImg(e, {
-              imageIndex: 0
-          });
+          return 0;
       }
   }
 
-  //TODO: RENAME THIS TO SOMETHING BETTER
-  MyViewer(props) {
-      let viewerImgName = "";
-      //TODO: P0 - FIX BUG! DEFAULT NOT SHOWING WHEN NO IMAGE PROVIDED IN URL
-      //TODO: P1 - FIX BUG! CHANGE URL WHEN IMAGE CLICKED - SEE ERROR IN CONSOLE
+  viewerWrapper(props) {
       //TODO: TEST OUT DIFFERENT URLS THAT ARE INVALID
+      // E.G. URIError: Failed to decode param when url invalid
+      //TODO: FIX ERROR IN CONSOLE
       if (props.match.params.image) {
-          this.swapViewerImgByUrl({
-              fileName: props.match.params.image
-          });
+          this.swapViewerImg(props.match.params.image);
       }
 
       return (
@@ -137,29 +98,28 @@ class App extends Component {
                 images={this.state.images}
                 goBack={this.goBack}
                 goForward={this.goForward}
-                //{...props}
             />
           </div>
       );
   }
 
   render() {
+    const firstTitle = this.state.images[0].title.toLowerCase().replace(/\s+/g, '');
     return (
       <div className="App">
         <header className="app-header">
           <h1 className="app-title">Mary's collection of homemade toys</h1>
-          <Route
-              path="/:image"
-              render={this.MyViewer}
-          />
-          <Route
-              exact
-              path="/"
-              render={() => (<Redirect to={`/${this.state.images[0].fileName}`}/>)}
-          />
+            <Route
+                path="/:image"
+                render={this.viewerWrapper}
+            />
+            <Route
+                exact
+                path="/"
+                render={() => (<Redirect to={firstTitle} />)}
+            />
         </header>
         <Gallery
-              handleClick={this.swapViewerImg}
               images={this.state.images}
         />
       </div>
